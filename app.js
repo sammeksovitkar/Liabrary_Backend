@@ -1,5 +1,3 @@
-// app.js (or server.js)
-
 require('dotenv').config();
 const express = require('express');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
@@ -7,17 +5,14 @@ const { JWT } = require('google-auth-library');
 const cors = require('cors');
 
 const app = express();
-const port = 5000; // Not used in Vercel, but harmless to keep
+const port = 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// ************ VERCEL/SERVERLESS INITIALIZATION ************
-
-// These variables MUST be defined in Vercel's Environment Variables
-// The whole block is now a function to handle initialization errors cleanly.
-let doc;
+// Google Sheet Setup - Modified for Vercel Serverless
+let doc; // Declare doc outside the try block so loadSheet can access it
 
 try {
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
@@ -25,46 +20,50 @@ try {
     // JWT authentication setup
     const serviceAccountAuth = new JWT({
         email: credentials.client_email,
-        // CRITICAL: Ensure the private key is cleaned up correctly.
+        
+        // CRITICAL FIX: Ensure the private key is cleaned up correctly.
         key: credentials.private_key.replace(/\\n/g, '\n'),
+        
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     doc = new GoogleSpreadsheet(process.env.SPREADSHEET_ID, serviceAccountAuth);
     
 } catch (e) {
-    // This will only log the config error but won't stop Vercel from booting the function.
-    // The endpoints will fail gracefully when they call loadSheet().
+    // 🛑 VERCEL CRITICAL FIX: DO NOT use process.exit(1) in a serverless function!
     console.error("!!! FATAL CONFIGURATION ERROR !!!");
-    console.error("Original Error:", e.message);
-    // Setting doc to null/undefined will cause the loadSheet() call below to fail.
+    console.error("Original Error: Could not initialize Google Sheets connection.", e.message);
+    // Setting doc to null/undefined will cause the loadSheet() function to throw an error 
+    // when an API endpoint is hit, but it allows the function to boot.
+    doc = null; 
 }
 
+// Function to load the sheet (now checks for initialization status)
 async function loadSheet() {
     if (!doc) {
-        throw new Error("Google Sheet client is not initialized due to configuration error.");
+        throw new Error("API Initialization failed. Check Vercel GOOGLE_CREDENTIALS and SPREADSHEET_ID variables.");
     }
-    // Only load info if it hasn't been loaded yet (optimization)
+    // Optimization: only load info if it hasn't been loaded yet.
     if (!doc.isLoaded) {
         await doc.loadInfo(); 
     }
     return doc.sheetsByIndex[1]; // Assuming data is in the second sheet (index 1)
 }
 
-// ************ API ENDPOINTS (Logic unchanged) ************
-
+// Define required fields ONCE for both POST and PUT
 const REQUIRED_FIELDS_FOR_BOOK = ['Class', 'Book Name', 'Book Price'];
 const generateBackendSrNo = () => {
     const uniquePart = Date.now().toString().slice(-6);
     return Number(uniquePart) + Math.floor(Math.random() * 1000); 
 };
-
-// POST /api/books (Add Book)
+// ----------------------------------------------------
+// 📖 ADD BOOK FACILITY (POST)
+// ----------------------------------------------------
 app.post('/api/books', async (req, res) => {
     try {
         const sheet = await loadSheet();
         let bookData = req.body;
-        // ... (rest of POST logic) ...
+
         const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !bookData[field]);
         if (missing.length) {
              return res.status(400).json({ message: `Missing fields: ${missing.join(', ')}` });
@@ -83,7 +82,9 @@ app.post('/api/books', async (req, res) => {
     }
 });
 
-// GET /api/books (List & Filter)
+// ----------------------------------------------------
+// 📚 LIST & FILTER SEARCH BOOKS (GET)
+// ----------------------------------------------------
 app.get('/api/books', async (req, res) => {
     try {
         const sheet = await loadSheet();
@@ -131,14 +132,15 @@ app.get('/api/books', async (req, res) => {
     }
 });
 
-// PUT /api/books/:srNo (Edit Book)
+// ----------------------------------------------------
+// ✏️ EDIT BOOK FACILITY (PUT)
+// ----------------------------------------------------
 app.put('/api/books/:srNo', async (req, res) => {
     try {
         const sheet = await loadSheet();
         const srNoToUpdate = req.params.srNo;
         const updatedData = req.body;
 
-        // ... (rest of PUT logic) ...
         const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !updatedData[field]);
         if (missing.length) {
              return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
@@ -183,7 +185,9 @@ app.put('/api/books/:srNo', async (req, res) => {
     }
 });
 
-// DELETE /api/books/:srNo (Delete Book)
+// ----------------------------------------------------
+// 🗑️ DELETE BOOK FACILITY (DELETE)
+// ----------------------------------------------------
 app.delete('/api/books/:srNo', async (req, res) => {
     try {
         const sheet = await loadSheet();
@@ -205,5 +209,7 @@ app.delete('/api/books/:srNo', async (req, res) => {
     }
 });
 
-// ************ VERCEL EXPORT ************
+// ----------------------------------------------------
+// VERCEL EXPORT
+// ----------------------------------------------------
 module.exports = app;
