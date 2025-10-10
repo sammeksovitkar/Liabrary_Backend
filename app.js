@@ -13,7 +13,7 @@ app.use(express.json());
 
 // Google Sheet Setup - Modified for Vercel Serverless
 let doc; // Declare doc outside the try block so loadSheet can access it
-
+console.log(process.env.GOOGLE_CREDENTIALS,"value")
 try {
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
     
