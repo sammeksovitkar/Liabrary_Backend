@@ -1,7 +1,7 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "app.js",  <-- Note: Changed to 'app.js' as per your previous setup
+  "main": "app.js",  
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,14 +10,14 @@
   "license": "ISC",
   "description": "",
   "engines": {
-    "node": "20.x"  <-- CRITICAL FIX 1: Specify a modern, stable Node.js version
+    "node": "20.x" 
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "google-auth-library": "^10.4.0",
-    "google-spreadsheet": "^4.1.0", <-- CRITICAL FIX 2: Upgrade the package to a version that fixes the module conflict
+    "google-spreadsheet": "^4.1.0", 
     "nodemon": "^3.1.10"
   }
 }
