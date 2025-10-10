@@ -10,14 +10,14 @@
   "license": "ISC",
   "description": "",
   "engines": {
-    "node": ">=18.0.0" 
+    "node": "20.x"  <-- CHANGE 1: Use a specific, modern version for stability
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "google-auth-library": "^10.4.0",
-    "google-spreadsheet": "^5.0.2",
+    "google-spreadsheet": "^4.1.0",  <-- CHANGE 2: Upgrade to a newer version (4.1.0 is a safe example, use the absolute latest you can find)
     "nodemon": "^3.1.10"
   }
 }
