@@ -109,7 +109,8 @@ app.get('/api/books', async (req, res) => {
                 other1: row.get('other1'),
                 other2: row.get('other2'),
                 // 🔑 ADDED: Map the new 'Reader' column
-                Reader: "sammek", 
+                Writer:row.get("Writer"),
+                Reader: row.get("Reader"), 
             };
         });
         
