@@ -132,7 +132,7 @@ app.get('/api/books', async (req, res) => {
             );
         }
 
-        res.status(200).json({books,st:"adf});
+        res.status(200).json({books:books,st:"adf});
     } catch (error) {
         console.error('Error fetching books:', error);
         res.status(500).json({ message: 'Error fetching books', error: error.message });
