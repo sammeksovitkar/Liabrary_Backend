@@ -197,27 +197,20 @@ app.get('/api/books', async (req, res) => {
 // ----------------------------------------------------
 // ✏️ EDIT BOOK FACILITY (PUT) - OPTIMIZED FOR ROBUSTNESS
 // ----------------------------------------------------
+// In your Node.js/Express server file:
+// Define this constant globally, as you already have:
+// const NUMERIC_FIELDS = ['SrNo', 'Volume', 'Book Price']; 
+
 app.put('/api/books/:srNo', async (req, res) => {
     try {
-        const sheet = await loadSheet();
-        const srNoToUpdate = req.params.srNo;
-        const updatedData = req.body;
-
-        const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !updatedData[field]);
-        if (missing.length) {
-              return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
-        }
+        // ... (loading sheet, finding row, required fields check, etc.) ...
         
-        const rows = await sheet.getRows();
+        // ...
         const rowToUpdate = rows.find(row => String(row.get('SrNo')) === String(srNoToUpdate));
-        
-        if (!rowToUpdate) {
-            return res.status(404).json({ message: `Book with SrNo ${srNoToUpdate} not found.` });
-        }
+        // ...
 
-        // Iterate over the keys provided by the client in the request body
         Object.keys(updatedData).forEach(key => {
-            // Skip the internal 'rowIndex' field if it was mistakenly included
+            // Skip the internal 'rowIndex' field
             if (key === 'rowIndex') return; 
 
             let value = updatedData[key];
@@ -226,22 +219,23 @@ app.put('/api/books/:srNo', async (req, res) => {
             const isNumericField = NUMERIC_FIELDS.includes(key);
 
             if (isNumericField) {
-                // For numeric fields, try to convert to a number, defaulting to 0
+                // For numeric fields, convert to a number, defaulting to 0
                 const numValue = Number(value);
+                // CRITICAL CHECK: Handles null, undefined, '', and NaN safely
                 value = isNaN(numValue) || value === null || value === '' ? 0 : numValue;
             } else {
-                // For all other fields, ensure they are treated as non-null strings
+                // For all other fields (strings), ensure they are non-null strings
                 value = (value === null || value === undefined) ? '' : String(value);
             }
             
-            // Set the value on the row object
             rowToUpdate.set(key, value);
         });
 
-        // 💡 CRITICAL: SAVE THE ROW *BEFORE* sending the success response
+        // This is the CRITICAL STEP that fixes the race condition/delayed error:
+        // Ensure this line is reached and executed successfully.
         await rowToUpdate.save(); 
         
-        // If saving is successful, send 200 OK
+        // ONLY send the success response AFTER the save is complete.
         res.status(200).json({ message: `Book ${srNoToUpdate} updated successfully!` });
     } catch (error) {
         // This catch block executes if anything inside the try fails (including save())
