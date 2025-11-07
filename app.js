@@ -143,6 +143,60 @@ app.get('/api/books', async (req, res) => {
 // ----------------------------------------------------
 // ✏️ EDIT BOOK FACILITY (PUT)
 // ----------------------------------------------------
+// app.put('/api/books/:srNo', async (req, res) => {
+//     try {
+//         const sheet = await loadSheet();
+//         const srNoToUpdate = req.params.srNo;
+//         const updatedData = req.body;
+
+//         const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !updatedData[field]);
+//         if (missing.length) {
+//              return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
+//         }
+        
+//         const rows = await sheet.getRows();
+//         const rowToUpdate = rows.find(row => String(row.get('SrNo')) === String(srNoToUpdate));
+        
+//         if (!rowToUpdate) {
+//             return res.status(404).json({ message: `Book with SrNo ${srNoToUpdate} not found.` });
+//         }
+
+//         Object.keys(updatedData).forEach(key => {
+//             let value = updatedData[key];
+            
+//             if (key === 'rowIndex') return; 
+
+//             // 🔑 UPDATED: Use the new NUMERIC_FIELDS constant here
+//             const isNumericField = NUMERIC_FIELDS.includes(key);
+
+//             if (isNumericField) {
+//                 if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
+//                     value = 0; 
+//                 } else {
+//                     value = Number(value);
+//                 }
+//             } else {
+//                 if (value === null || value === undefined) {
+//                     value = '';
+//                 } else {
+//                     value = String(value);
+//                 }
+//             }
+            
+//             // PUT: rowToUpdate.set will now correctly save the 'Reader' value
+//             rowToUpdate.set(key, value);
+//         });
+
+//         await rowToUpdate.save();
+//         res.status(200).json({ message: `Book ${srNoToUpdate} updated successfully!` });
+//     } catch (error) {
+//         console.error('FATAL Error updating book:', error.message, error.stack);
+//         res.status(500).json({ message: 'Error updating book', error: error.message });
+//     }
+// });
+// ----------------------------------------------------
+// ✏️ EDIT BOOK FACILITY (PUT) - OPTIMIZED FOR ROBUSTNESS
+// ----------------------------------------------------
 app.put('/api/books/:srNo', async (req, res) => {
     try {
         const sheet = await loadSheet();
@@ -151,7 +205,7 @@ app.put('/api/books/:srNo', async (req, res) => {
 
         const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !updatedData[field]);
         if (missing.length) {
-             return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
+              return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
         }
         
         const rows = await sheet.getRows();
@@ -161,40 +215,41 @@ app.put('/api/books/:srNo', async (req, res) => {
             return res.status(404).json({ message: `Book with SrNo ${srNoToUpdate} not found.` });
         }
 
+        // Iterate over the keys provided by the client in the request body
         Object.keys(updatedData).forEach(key => {
-            let value = updatedData[key];
-            
+            // Skip the internal 'rowIndex' field if it was mistakenly included
             if (key === 'rowIndex') return; 
 
-            // 🔑 UPDATED: Use the new NUMERIC_FIELDS constant here
+            let value = updatedData[key];
+            
+            // 1. Determine if the field is expected to be numeric
             const isNumericField = NUMERIC_FIELDS.includes(key);
 
             if (isNumericField) {
-                if (value === null || value === undefined || value === '' || isNaN(Number(value))) {
-                    value = 0; 
-                } else {
-                    value = Number(value);
-                }
+                // For numeric fields, try to convert to a number, defaulting to 0
+                const numValue = Number(value);
+                value = isNaN(numValue) || value === null || value === '' ? 0 : numValue;
             } else {
-                if (value === null || value === undefined) {
-                    value = '';
-                } else {
-                    value = String(value);
-                }
+                // For all other fields, ensure they are treated as non-null strings
+                value = (value === null || value === undefined) ? '' : String(value);
             }
             
-            // PUT: rowToUpdate.set will now correctly save the 'Reader' value
+            // Set the value on the row object
             rowToUpdate.set(key, value);
         });
 
-        await rowToUpdate.save();
+        // 💡 CRITICAL: SAVE THE ROW *BEFORE* sending the success response
+        await rowToUpdate.save(); 
+        
+        // If saving is successful, send 200 OK
         res.status(200).json({ message: `Book ${srNoToUpdate} updated successfully!` });
     } catch (error) {
+        // This catch block executes if anything inside the try fails (including save())
         console.error('FATAL Error updating book:', error.message, error.stack);
+        // Ensure you always send an error response if something goes wrong
         res.status(500).json({ message: 'Error updating book', error: error.message });
     }
 });
-
 // ----------------------------------------------------
 // 🗑️ DELETE BOOK FACILITY (DELETE)
 // ----------------------------------------------------
