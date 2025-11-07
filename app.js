@@ -15,6 +15,21 @@ app.use(express.json());
 // Google Sheet Setup - Modified for Vercel Serverless
 let doc; // Declare doc outside the try block so loadSheet can access it
 console.log(process.env.GOOGLE_CREDENTIALS,"value")
+// Add this list near your other constants (REQUIRED_FIELDS_FOR_BOOK)
+const ALL_UPDATABLE_FIELDS = [
+    'Class', 
+    'SrNo', 
+    'Book Name', 
+    'Volume', 
+    'Date', 
+    'Book Price', 
+    'Room', 
+    'Kapat', 
+    'other1', 
+    'other2', 
+    'Writer', 
+    'Reader' // Include all relevant columns
+];
 try {
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
     
@@ -207,53 +222,57 @@ app.get('/api/books', async (req, res) => {
 // ----------------------------------------------------
 // ✏️ EDIT BOOK FACILITY (PUT) - COMPLETE & CORRECTED
 // ----------------------------------------------------
+// ----------------------------------------------------
+// ✏️ EDIT BOOK FACILITY (PUT) - FINAL ROBUST VERSION
+// ----------------------------------------------------
 app.put('/api/books/:srNo', async (req, res) => {
     try {
         const sheet = await loadSheet();
-        const srNoToUpdate = req.params.srNo; // <--- RE-ADDED
-        const updatedData = req.body;         // <--- RE-ADDED
+        const srNoToUpdate = req.params.srNo;
+        const updatedData = req.body;
 
         const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !updatedData[field]);
         if (missing.length) {
               return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
         }
         
-        const rows = await sheet.getRows(); // <--- RE-ADDED
+        const rows = await sheet.getRows(); 
         const rowToUpdate = rows.find(row => String(row.get('SrNo')) === String(srNoToUpdate));
         
         if (!rowToUpdate) {
             return res.status(404).json({ message: `Book with SrNo ${srNoToUpdate} not found.` });
         }
 
-        // --- Data Normalization Logic (The Robust Part) ---
+        // CRITICAL FIX: Only iterate over keys we know and trust
         Object.keys(updatedData).forEach(key => {
-            // Skip the internal 'rowIndex' field
-            if (key === 'rowIndex') return; 
+            // Skip internal fields and unknown fields
+            if (key === 'rowIndex' || !ALL_UPDATABLE_FIELDS.includes(key)) return; 
 
             let value = updatedData[key];
             
-            // 1. Determine if the field is expected to be numeric
             const isNumericField = NUMERIC_FIELDS.includes(key);
 
             if (isNumericField) {
-                // For numeric fields, convert to a number, defaulting to 0
                 const numValue = Number(value);
-                // CRITICAL CHECK: Handles null, undefined, '', and NaN safely
+                // Safe number conversion
                 value = isNaN(numValue) || value === null || value === '' ? 0 : numValue;
             } else {
-                // For all other fields (strings), ensure they are non-null strings
+                // Safe string conversion
                 value = (value === null || value === undefined) ? '' : String(value);
             }
             
             rowToUpdate.set(key, value);
         });
-        // --- End Data Normalization Logic ---
 
+        // The save is successful, which is why your data updates.
         await rowToUpdate.save(); 
         
+        // This is the success response that should now execute without error.
         res.status(200).json({ message: `Book ${srNoToUpdate} updated successfully!` });
     } catch (error) {
+        // This is where the error was previously being caught.
         console.error('FATAL Error updating book:', error.message, error.stack);
+        // We still return 500 in case of a true error.
         res.status(500).json({ message: 'Error updating book', error: error.message });
     }
 });
