@@ -201,14 +201,28 @@ app.get('/api/books', async (req, res) => {
 // Define this constant globally, as you already have:
 // const NUMERIC_FIELDS = ['SrNo', 'Volume', 'Book Price']; 
 
+// ----------------------------------------------------
+// ✏️ EDIT BOOK FACILITY (PUT) - COMPLETE & CORRECTED
+// ----------------------------------------------------
 app.put('/api/books/:srNo', async (req, res) => {
     try {
-        // ... (loading sheet, finding row, required fields check, etc.) ...
-        
-        // ...
-        const rowToUpdate = rows.find(row => String(row.get('SrNo')) === String(srNoToUpdate));
-        // ...
+        const sheet = await loadSheet();
+        const srNoToUpdate = req.params.srNo; // <--- RE-ADDED
+        const updatedData = req.body;         // <--- RE-ADDED
 
+        const missing = REQUIRED_FIELDS_FOR_BOOK.filter(field => !updatedData[field]);
+        if (missing.length) {
+              return res.status(400).json({ message: `Missing required fields for update: ${missing.join(', ')}` });
+        }
+        
+        const rows = await sheet.getRows(); // <--- RE-ADDED
+        const rowToUpdate = rows.find(row => String(row.get('SrNo')) === String(srNoToUpdate));
+        
+        if (!rowToUpdate) {
+            return res.status(404).json({ message: `Book with SrNo ${srNoToUpdate} not found.` });
+        }
+
+        // --- Data Normalization Logic (The Robust Part) ---
         Object.keys(updatedData).forEach(key => {
             // Skip the internal 'rowIndex' field
             if (key === 'rowIndex') return; 
@@ -230,17 +244,13 @@ app.put('/api/books/:srNo', async (req, res) => {
             
             rowToUpdate.set(key, value);
         });
+        // --- End Data Normalization Logic ---
 
-        // This is the CRITICAL STEP that fixes the race condition/delayed error:
-        // Ensure this line is reached and executed successfully.
         await rowToUpdate.save(); 
         
-        // ONLY send the success response AFTER the save is complete.
         res.status(200).json({ message: `Book ${srNoToUpdate} updated successfully!` });
     } catch (error) {
-        // This catch block executes if anything inside the try fails (including save())
         console.error('FATAL Error updating book:', error.message, error.stack);
-        // Ensure you always send an error response if something goes wrong
         res.status(500).json({ message: 'Error updating book', error: error.message });
     }
 });
