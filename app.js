@@ -128,12 +128,12 @@ app.post('/api/books', async (req, res) => {
 });
 
 // --- 6. START SERVER (Local Only) ---
-const PORT = process.env.PORT || 5000;
-if (require.main === module) {
-    app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT}`);
-    });
-}
+// const PORT = process.env.PORT || 5000;
+// if (require.main === module) {
+//     app.listen(PORT, '0.0.0.0', () => {
+//         console.log(`Server running on port ${PORT}`);
+//     });
+// }
 
 // EXPORT FOR VERCEL
-// module.exports = app;
+module.exports = app;
