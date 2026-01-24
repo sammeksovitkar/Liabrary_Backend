@@ -99,6 +99,19 @@ app.get('/api/books', async (req, res) => {
             'Book Name': row.get('Book Name'),
             'Book Price': row.get('Book Price'),
             Reader: row.get('Reader'), 
+            Writer:row.get('Writer'),
+            Volume:row.get('Volume'),
+            Date:row.get('Date'),
+            Reader:row.get('Reader'),
+            Room:row.get('Room'),
+
+
+
+
+            // 
+
+
+
         }));
         res.status(200).json(books);
     } catch (error) { res.status(500).json({ message: 'Error fetching books', error: error.message }); }
@@ -116,11 +129,11 @@ app.post('/api/books', async (req, res) => {
 
 // --- 6. START SERVER (Local Only) ---
 const PORT = process.env.PORT || 5000;
-// if (require.main === module) {
-//     app.listen(PORT, '0.0.0.0', () => {
-//         console.log(`Server running on port ${PORT}`);
-//     });
-// }
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 // EXPORT FOR VERCEL
-module.exports = app;
+// module.exports = app;
