@@ -373,13 +373,13 @@ const handleSheetsRequest = async (sheetIndex, req, res) => {
 
 // --- ROUTES ---
 const sheetRoutes = [
-    { path: '/api/books', idx: LIBRARY_SHEET_NAME },
-    { path: '/api/inward/marathi', idx: MAR_INWARD_NAME },
-    { path: '/api/inward/english', idx: ENG_INWARD_NAME },
-    { path: '/api/outward/marathi', idx: MAR_OUTWARD_NAME },
-    { path: '/api/outward/english', idx: ENG_OUTWARD_NAME },
-    { path: '/api/post-tracking', idx: POST_TRACKING_DUMMY_INDEX },
-    { path: '/api/assets', idx: MUDDEMAL_SHEET_NAME },
+    { path: '/books', idx: LIBRARY_SHEET_NAME },
+    { path: '/inward/marathi', idx: MAR_INWARD_NAME },
+    { path: '/inward/english', idx: ENG_INWARD_NAME },
+    { path: '/outward/marathi', idx: MAR_OUTWARD_NAME },
+    { path: '/outward/english', idx: ENG_OUTWARD_NAME },
+    { path: '/post-tracking', idx: POST_TRACKING_DUMMY_INDEX },
+    { path: '/assets', idx: MUDDEMAL_SHEET_NAME },
 ];
 
 sheetRoutes.forEach(r => {
